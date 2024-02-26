@@ -1,10 +1,5 @@
 import streamlit as st
 import requests
-import pandas as pd
-import matplotlib.pyplot as plt
-import mplfinance as mpf
-from datetime import timedelta
-import numpy as np
 from tradingview_ta import TA_Handler, Interval
 
 
@@ -49,7 +44,7 @@ def main():
                     col3.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each})")
                 elif res_5_min == res_15_min == res_1_hour == res_1_day == 'STRONG_SELL':
                     col4.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each})")
-            except:
+            except Exception as error:
                 col5.write(each)
 
 
