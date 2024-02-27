@@ -116,7 +116,7 @@ def main():
             except Exception as error:
                 col5.write(each)
 
-    chart = params['chart'] if 'chart' in params else st.text_input('Do a quick check')
+    chart = params.get('chart', st.text_input('Do a quick check'))
     if chart:
         st.header(chart)
         col1, col2 = st.columns(2)
