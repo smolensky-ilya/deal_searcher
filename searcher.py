@@ -118,10 +118,19 @@ def main():
     chart = params['chart'] if 'chart' in params else st.text_input('Do a quick check')
     if chart:
         st.header(chart)
-        st.write("5min: " + get_analysis(chart, interval=Interval.INTERVAL_5_MINUTES))
-        st.write("15min: " + get_analysis(chart, interval=Interval.INTERVAL_15_MINUTES))
-        st.write("1H: " + get_analysis(chart, interval=Interval.INTERVAL_1_HOUR))
-        st.write("1D: " + get_analysis(chart, interval=Interval.INTERVAL_1_DAY))
+        col1, col2 = st.columns(2)
+        col1.markdown(f"[Bitget](https://www.bitget.com/futures/usdt/{chart})")
+        col1.write("5min: " + get_analysis(chart, interval=Interval.INTERVAL_5_MINUTES))
+        col1.write("15min: " + get_analysis(chart, interval=Interval.INTERVAL_15_MINUTES))
+        col1.write("1H: " + get_analysis(chart, interval=Interval.INTERVAL_1_HOUR))
+        col1.write("1D: " + get_analysis(chart, interval=Interval.INTERVAL_1_DAY))
+
+        col2.write("1min: " + get_analysis(chart, interval=Interval.INTERVAL_1_MINUTE))
+        col2.write("30min: " + get_analysis(chart, interval=Interval.INTERVAL_30_MINUTES))
+        col2.write("2H: " + get_analysis(chart, interval=Interval.INTERVAL_2_HOURS))
+        col2.write("4H: " + get_analysis(chart, interval=Interval.INTERVAL_4_HOURS))
+        col2.write("1W: " + get_analysis(chart, interval=Interval.INTERVAL_1_WEEK))
+        col2.write("1M: " + get_analysis(chart, interval=Interval.INTERVAL_1_MONTH))
         col1, col2 = st.columns(2)
         figs = plot_my_thing(chart, 'figure this out')
         for i, fig in enumerate(figs.keys()):
