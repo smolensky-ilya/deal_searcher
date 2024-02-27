@@ -67,7 +67,7 @@ def plot_my_thing(ticker, signal):
                     else:
                         ax.axhline(each, color=grans[level][0], linestyle='-.', alpha=grans[level][1])
         ax.set_title(f"{ticker} // {gran} // {signal.upper()}")
-        plt.legend()
+        plt.legend(loc='lower left')
         all_figs[gran] = fig
     return all_figs
 
