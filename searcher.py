@@ -34,11 +34,11 @@ def get_candles(ticker, gran='1H', limit=500):
 def plot_my_thing(ticker, signal):
     def lines_filter(lvl):
         temp = lvl.copy()
-        start = 0.00001
+        tick = start = lvl.mean() * 0.001
         maximum = 7
         while True:
             temp = lvl[abs(lvl.diff()) > start]
-            start += 0.00001
+            start += tick
             if len(temp) <= maximum:
                 return temp
 
@@ -76,8 +76,12 @@ def rerun():
     st.experimental_rerun()
 
 
+def get_link(chart):
+    return f"?chart={chart}"
+
+
 def main():
-    params = st.query_params.get_all()  # LINK PARAMS
+    params = st.query_params.to_dict()  # LINK PARAMS
     st.set_page_config(layout="wide")
     all_tickers = get_all_tickers()
     st.title('Bitget deal searcher')
@@ -89,9 +93,7 @@ def main():
         col3.header('SELL')
         col4.header('STRONG_SELL')
         col5.header('***errors')
-
         signals = []
-
         for each in all_tickers:
             try:
                 res_5_min = get_analysis(each, interval=Interval.INTERVAL_5_MINUTES)
@@ -100,29 +102,33 @@ def main():
                 res_1_day = get_analysis(each, interval=Interval.INTERVAL_1_DAY)
                 if res_5_min == res_15_min == res_1_hour == res_1_day == 'STRONG_BUY':
                     signals.append([each, res_5_min])
-                    col1.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each})")
+                    col1.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each}) " + f"[C]({get_link(each)})")
                 elif res_5_min == res_15_min == res_1_hour == res_1_day == 'BUY':
                     signals.append([each, res_5_min])
-                    col2.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each})")
+                    col2.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each}) " + f"[C]({get_link(each)})")
                 elif res_5_min == res_15_min == res_1_hour == res_1_day == 'SELL':
                     signals.append([each, res_5_min])
-                    col3.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each})")
+                    col3.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each}) " + f"[C]({get_link(each)})")
                 elif res_5_min == res_15_min == res_1_hour == res_1_day == 'STRONG_SELL':
                     signals.append([each, res_5_min])
-                    col4.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each})")
+                    col4.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each}) " + f"[C]({get_link(each)})")
             except Exception as error:
                 col5.write(each)
 
-        chart = params['chart'] if 'chart' in params else st.text_input('Insert a ticker to build charts')
-        if chart:
-            col1, col2 = st.columns(2)
-            for each in signals:
-                figs = plot_my_thing(each[0], each[1])
-                for i, fig in enumerate(figs.keys()):
-                    if (i + 1) % 2 == 0:
-                        col1.pyplot(figs[fig], use_container_width=True)
-                    else:
-                        col2.pyplot(figs[fig], use_container_width=True)
+    chart = params['chart'] if 'chart' in params else st.text_input('Do a quick check')
+    if chart:
+        st.header(chart)
+        st.write("5min: " + get_analysis(chart, interval=Interval.INTERVAL_5_MINUTES))
+        st.write("15min: " + get_analysis(chart, interval=Interval.INTERVAL_15_MINUTES))
+        st.write("1H: " + get_analysis(chart, interval=Interval.INTERVAL_1_HOUR))
+        st.write("1D: " + get_analysis(chart, interval=Interval.INTERVAL_1_DAY))
+        col1, col2 = st.columns(2)
+        figs = plot_my_thing(chart, 'figure this out')
+        for i, fig in enumerate(figs.keys()):
+            if (i + 1) % 2 == 0:
+                col1.pyplot(figs[fig], use_container_width=True)
+            else:
+                col2.pyplot(figs[fig], use_container_width=True)
 
 
 if __name__ == "__main__":
