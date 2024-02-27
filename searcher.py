@@ -77,6 +77,7 @@ def rerun():
 
 
 def main():
+    params = st.query_params.get_all()  # LINK PARAMS
     st.set_page_config(layout="wide")
     all_tickers = get_all_tickers()
     st.title('Bitget deal searcher')
@@ -111,14 +112,17 @@ def main():
                     col4.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each})")
             except Exception as error:
                 col5.write(each)
-        col1, col2 = st.columns(2)
-        for each in signals:
-            figs = plot_my_thing(each[0], each[1])
-            for i, fig in enumerate(figs.keys()):
-                if (i + 1) % 2 == 0:
-                    col1.pyplot(figs[fig], use_container_width=True)
-                else:
-                    col2.pyplot(figs[fig], use_container_width=True)
+
+        chart = params['chart'] if 'chart' in params else st.text_input('Insert a ticker to build charts')
+        if chart:
+            col1, col2 = st.columns(2)
+            for each in signals:
+                figs = plot_my_thing(each[0], each[1])
+                for i, fig in enumerate(figs.keys()):
+                    if (i + 1) % 2 == 0:
+                        col1.pyplot(figs[fig], use_container_width=True)
+                    else:
+                        col2.pyplot(figs[fig], use_container_width=True)
 
 
 if __name__ == "__main__":
