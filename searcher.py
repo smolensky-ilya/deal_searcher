@@ -116,9 +116,9 @@ def main():
             figs = plot_my_thing(each[0], each[1])
             for i, fig in enumerate(figs.keys()):
                 if (i + 1) % 2 == 0:
-                    col1.pyplot(figs[figs[fig]], use_container_width=True)
+                    col1.pyplot(figs[fig], use_container_width=True)
                 else:
-                    col2.pyplot(figs[figs[fig]], use_container_width=True)
+                    col2.pyplot(figs[fig], use_container_width=True)
 
 
 if __name__ == "__main__":
