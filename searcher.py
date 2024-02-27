@@ -82,7 +82,7 @@ def get_link(chart):
 
 def main():
     params = st.query_params.to_dict()  # LINK PARAMS
-    ticker = params.get('chart', "").upper() + " | "
+    ticker = (params['chart'].upper() + " | ") if 'chart' in params else ""
     st.set_page_config(layout="wide", page_title=ticker + "Deal searcher | SMK")
     all_tickers = get_all_tickers()
     st.title('Bitget deal searcher')
