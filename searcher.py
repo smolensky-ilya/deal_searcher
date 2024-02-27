@@ -82,7 +82,8 @@ def get_link(chart):
 
 def main():
     params = st.query_params.to_dict()  # LINK PARAMS
-    st.set_page_config(layout="wide", page_title="Deal searcher | SMK")
+    ticker = params.get('chart', "").upper() + " | "
+    st.set_page_config(layout="wide", page_title=ticker + "Deal searcher | SMK")
     all_tickers = get_all_tickers()
     st.title('Bitget deal searcher')
     run = st.button('Refresh')
@@ -117,7 +118,6 @@ def main():
 
     chart = params['chart'] if 'chart' in params else st.text_input('Do a quick check')
     if chart:
-        st.set_page_config(page_title=f"{chart.upper()} | Deal searcher | SMK")
         st.header(chart)
         col1, col2 = st.columns(2)
         col1.markdown(f"[Bitget](https://www.bitget.com/futures/usdt/{chart})")
