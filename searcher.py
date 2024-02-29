@@ -76,25 +76,31 @@ def rerun():
     st.experimental_rerun()
 
 
-def get_link(chart):
-    return f"?chart={chart}"
+def get_link(ticker):
+    return f"[{ticker}](https://www.bitget.com/futures/usdt/{ticker}) " + f"[C](?chart={ticker})"
 
 
 def main():
     params = st.query_params.to_dict()  # LINK PARAMS
     ticker = (params['chart'].upper() + " | ") if 'chart' in params else ""
-    st.set_page_config(layout="wide", page_title=ticker + "Deal searcher | SMK")
+    st.set_page_config(layout="wide", page_title=ticker + "Deal searcher | SMK", initial_sidebar_state='collapsed')
     all_tickers = get_all_tickers()
+    chart = params.get('chart', st.text_input('Check a ticker', placeholder='BTCUSDT'))
     st.title('Bitget deal searcher')
-    run = st.button('Refresh')
+    run = st.button('Scan the market')
+
     if run:
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.header('STRONG_BUY')
-        col2.header('BUY')
-        col3.header('SELL')
-        col4.header('STRONG_SELL')
-        col5.header('***errors')
-        signals = []
+        col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+        errors = []
+        signals_stat = {'STRONG_BUY': 0, 'MORE_BUY': 0, 'BUY': 0,
+                        'SELL': 0, 'MORE_SELL': 0, 'STRONG_SELL': 0, 'NEUTRAL': 0}
+        col1.header('STR_BUY')
+        col2.header('More-BUY')
+        col3.header('BUY')
+        col4.header('SELL')
+        col5.header('More-SELL')
+        col6.header('STR_SELL')
+        col7.header('other')
         for each in all_tickers:
             try:
                 res_5_min = get_analysis(each, interval=Interval.INTERVAL_5_MINUTES)
@@ -102,43 +108,70 @@ def main():
                 res_1_hour = get_analysis(each, interval=Interval.INTERVAL_1_HOUR)
                 res_1_day = get_analysis(each, interval=Interval.INTERVAL_1_DAY)
                 if res_5_min == res_15_min == res_1_hour == res_1_day == 'STRONG_BUY':
-                    signals.append([each, res_5_min])
-                    col1.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each}) " + f"[C]({get_link(each)})")
+                    col1.markdown(get_link(each))
+                    signals_stat['STRONG_BUY'] += 1
                 elif res_5_min == res_15_min == res_1_hour == res_1_day == 'BUY':
-                    signals.append([each, res_5_min])
-                    col2.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each}) " + f"[C]({get_link(each)})")
+                    col3.markdown(get_link(each))
+                    signals_stat['BUY'] += 1
+                elif (res_5_min in ['BUY', 'STRONG_BUY'] and res_15_min in ['BUY', 'STRONG_BUY'] and
+                        res_1_hour in ['BUY', 'STRONG_BUY'] and res_1_day in ['BUY', 'STRONG_BUY']):
+                    col2.markdown(get_link(each))
+                    signals_stat['MORE_BUY'] += 1
                 elif res_5_min == res_15_min == res_1_hour == res_1_day == 'SELL':
-                    signals.append([each, res_5_min])
-                    col3.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each}) " + f"[C]({get_link(each)})")
+                    col4.markdown(get_link(each))
+                    signals_stat['SELL'] += 1
                 elif res_5_min == res_15_min == res_1_hour == res_1_day == 'STRONG_SELL':
-                    signals.append([each, res_5_min])
-                    col4.markdown(f"[{each}](https://www.bitget.com/futures/usdt/{each}) " + f"[C]({get_link(each)})")
+                    col6.markdown(get_link(each))
+                    signals_stat['STRONG_SELL'] += 1
+                elif (res_5_min in ['SELL', 'STRONG_SELL'] and res_15_min in ['SELL', 'STRONG_SELL'] and
+                        res_1_hour in ['SELL', 'STRONG_SELL'] and res_1_day in ['SELL', 'STRONG_SELL']):
+                    col5.markdown(get_link(each))
+                    signals_stat['MORE_SELL'] += 1
+                else:
+                    col7.markdown(get_link(each))
+                    signals_stat['NEUTRAL'] += 1
             except Exception as error:
-                col5.write(each)
-
-    chart = params.get('chart', st.text_input('Do a quick check'))
+                errors.append(each)
+        st.sidebar.header('STATS:')
+        overall = sum(signals_stat.values())
+        st.sidebar.write(f"Buy: {((signals_stat['BUY'] + signals_stat['STRONG_BUY'] + signals_stat['MORE_BUY']) / overall) * 100:.2f}%")
+        st.sidebar.write(f"--- Strong Buy: {(signals_stat['STRONG_BUY'] / overall) * 100:.2f}%")
+        st.sidebar.write(f"--- More Buy: {(signals_stat['MORE_BUY'] / overall) * 100:.2f}%")
+        st.sidebar.write(f"--- Buy: {(signals_stat['BUY'] / overall) * 100:.2f}%")
+        st.sidebar.write(f"Sell: {((signals_stat['SELL'] + signals_stat['STRONG_SELL'] + signals_stat['MORE_SELL']) / overall) * 100:.2f}%")
+        st.sidebar.write(f"--- Strong Sell: {(signals_stat['STRONG_SELL'] / overall) * 100:.2f}%")
+        st.sidebar.write(f"--- More Sell: {(signals_stat['MORE_SELL'] / overall) * 100:.2f}%")
+        st.sidebar.write(f"--- Sell: {(signals_stat['SELL'] / overall) * 100:.2f}%")
+        st.sidebar.write(f"Neutral: {(signals_stat['NEUTRAL'] / overall) * 100:.2f}%")
+        st.sidebar.write(f"Overall pairs checked: {overall}")
+        st.sidebar.write(f'*Errors*: {", ".join(errors)}')
     if chart:
+        chart = chart + "USDT" if chart[-4:] != "USDT" else chart
         st.header(chart)
-        col1, col2 = st.columns(2)
-        col1.markdown(f"[Bitget](https://www.bitget.com/futures/usdt/{chart})")
-        col1.write("5min: " + get_analysis(chart, interval=Interval.INTERVAL_5_MINUTES))
-        col1.write("15min: " + get_analysis(chart, interval=Interval.INTERVAL_15_MINUTES))
-        col1.write("1H: " + get_analysis(chart, interval=Interval.INTERVAL_1_HOUR))
-        col1.write("1D: " + get_analysis(chart, interval=Interval.INTERVAL_1_DAY))
+        try:
+            col1, col2 = st.columns(2)
+            col1.markdown(f"[Bitget](https://www.bitget.com/futures/usdt/{chart})")
+            col1.write("5min: " + get_analysis(chart, interval=Interval.INTERVAL_5_MINUTES))
+            col1.write("15min: " + get_analysis(chart, interval=Interval.INTERVAL_15_MINUTES))
+            col1.write("1H: " + get_analysis(chart, interval=Interval.INTERVAL_1_HOUR))
+            col1.write("1D: " + get_analysis(chart, interval=Interval.INTERVAL_1_DAY))
 
-        col2.write("1min: " + get_analysis(chart, interval=Interval.INTERVAL_1_MINUTE))
-        col2.write("30min: " + get_analysis(chart, interval=Interval.INTERVAL_30_MINUTES))
-        col2.write("2H: " + get_analysis(chart, interval=Interval.INTERVAL_2_HOURS))
-        col2.write("4H: " + get_analysis(chart, interval=Interval.INTERVAL_4_HOURS))
-        col2.write("1W: " + get_analysis(chart, interval=Interval.INTERVAL_1_WEEK))
-        col2.write("1M: " + get_analysis(chart, interval=Interval.INTERVAL_1_MONTH))
-        col1, col2 = st.columns(2)
-        figs = plot_my_thing(chart, 'figure this out')
-        for i, fig in enumerate(figs.keys()):
-            if (i + 1) % 2 == 0:
-                col1.pyplot(figs[fig], use_container_width=True)
-            else:
-                col2.pyplot(figs[fig], use_container_width=True)
+            col2.write("1min: " + get_analysis(chart, interval=Interval.INTERVAL_1_MINUTE))
+            col2.write("30min: " + get_analysis(chart, interval=Interval.INTERVAL_30_MINUTES))
+            col2.write("2H: " + get_analysis(chart, interval=Interval.INTERVAL_2_HOURS))
+            col2.write("4H: " + get_analysis(chart, interval=Interval.INTERVAL_4_HOURS))
+            col2.write("1W: " + get_analysis(chart, interval=Interval.INTERVAL_1_WEEK))
+            col2.write("1M: " + get_analysis(chart, interval=Interval.INTERVAL_1_MONTH))
+            col1, col2 = st.columns(2)
+            figs = plot_my_thing(chart, 'figure this out')
+            for i, fig in enumerate(figs.keys()):
+                if (i + 1) % 2 == 0:
+                    col1.pyplot(figs[fig], use_container_width=True)
+                else:
+                    col2.pyplot(figs[fig], use_container_width=True)
+        except Exception as e:
+            if str(e) == "Exchange or symbol not found.":
+                st.write("The ticker wasn't found or doesn't exist.")
 
 
 if __name__ == "__main__":
