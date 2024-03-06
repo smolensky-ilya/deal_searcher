@@ -5,7 +5,7 @@ import pandas as pd
 import mplfinance as mpf
 from datetime import timedelta
 import matplotlib.pyplot as plt
-from numpy import int64
+import numpy as np
 
 
 def get_analysis(ticker, interval):
@@ -24,11 +24,29 @@ def get_candles(ticker, gran='1H', limit=500):
         f"&granularity={gran}&productType=usdt-futures&limit={limit}")
     df = pd.DataFrame(response.json()['data'],
                       columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'base_coin_value'])
-    df['timestamp'] = pd.to_datetime(df['timestamp'].astype(int64), unit='ms') + timedelta(hours=3)
+    df['timestamp'] = pd.to_datetime(df['timestamp'].astype(np.int64), unit='ms') + timedelta(hours=3)
     for each in df.columns[1:]:
         df[each] = pd.to_numeric(df[each])
     df.index = df['timestamp']
     return df
+
+
+def calculate_trend_line_points(df, trend='upper', window=40, trend_size=200, open_col='open', close_col='close'):
+    df_f = df.iloc[-trend_size:].copy()
+    group_keys = np.arange(len(df_f)) // window
+    df_f['upper_part'] = df_f.apply(lambda row: row['open'] if row['open'] > row['close'] else row['close'],
+                                    axis=1) if trend == 'upper' else \
+        df_f.apply(lambda row: row['open'] if row['open'] < row['close'] else row['close'], axis=1)
+    df_f['trend'] = df_f.groupby(group_keys)['upper_part'].transform('max' if trend == 'upper' else 'min')
+    x_numeric = df_f.index.astype(np.int64)
+    slope, intercept = np.polyfit(x_numeric, df_f['trend'], 1)
+    y_start = slope * x_numeric[0] + intercept
+    y_end = slope * x_numeric[-1] + intercept
+    x_start = pd.to_datetime(x_numeric[0])
+    x_end = pd.to_datetime(x_numeric[-1])
+    start_point = (x_start, y_start)
+    end_point = (x_end, y_end)
+    return start_point, end_point
 
 
 def plot_my_thing(ticker, signal):
@@ -57,7 +75,7 @@ def plot_my_thing(ticker, signal):
     for gran in grans.keys():
         added_labels = set()
         fig, ax = plt.subplots(figsize=(12, 5))
-        mpf.plot(dfs[gran], type='candle', ax=ax, style='charles')
+        mpf.plot(dfs[gran], type='candle', ax=ax, style='charles', show_nontrading=True)
         for level in lvls.keys():
             for each in lvls[level]:
                 if (dfs[gran]['high'].max()) * 1.005 >= each >= (dfs[gran]['low'].min() * 0.95):
@@ -66,6 +84,16 @@ def plot_my_thing(ticker, signal):
                         added_labels.add(level)
                     else:
                         ax.axhline(each, color=grans[level][0], linestyle='-.', alpha=grans[level][1])
+                    # ADDING TRENDLINES
+        ts = int(len(dfs[gran]) / 10)
+        w = int(ts / 2)
+        up_start_point, up_end_point = calculate_trend_line_points(dfs[gran], trend_size=ts, window=w,
+                                                                   trend='upper')
+        low_start_point, low_end_point = calculate_trend_line_points(dfs[gran], trend_size=ts, window=w,
+                                                                     trend='lower')
+        ax.plot([up_start_point[0], up_end_point[0]], [up_start_point[1], up_end_point[1]], color='b')
+        ax.plot([low_start_point[0], low_end_point[0]], [low_start_point[1], low_end_point[1]], color='b')
+
         ax.set_title(f"{ticker} // {gran} // {signal.upper()}")
         plt.legend(loc='center left')
         all_figs[gran] = fig
