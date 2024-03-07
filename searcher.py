@@ -108,14 +108,65 @@ def get_link(ticker):
     return f"[{ticker}](https://www.bitget.com/futures/usdt/{ticker}) " + f"[C](?chart={ticker})"
 
 
+def trendlines_rating():
+    def get_rating(upper_trend, lower_trend, cur_price, bins=9):
+        if lower_trend > upper_trend:
+            return 0
+        step = (upper_trend - lower_trend) / bins
+        if cur_price < lower_trend:
+            return int((cur_price - lower_trend) / step)
+        elif cur_price > upper_trend:
+            return int((cur_price - lower_trend) / step) + 1
+        else:
+            rate = {}
+            cur = lower_trend
+            for i, s in enumerate(range(bins + 1)):
+                rate[abs(cur - cur_price)] = s + 1
+                cur = lower_trend + (step * (i + 1))
+            return rate[min(rate.keys())]
+
+    granularities = ['15m', '1D', '1H']  # the last one will be charted!
+    list_of_all = []
+    all_tickers = get_all_tickers()
+    complete_len, current_len = len(all_tickers), 0
+    my_bar = st.progress(0.0, text='Parsing the tickers...')
+    placeholder = st.empty()
+    for each in all_tickers:
+        current_len += 1 / complete_len
+        rating = {}
+        gran_trendlines = {}
+        my_bar.progress(current_len, text=f'{each} // {round(current_len * 100, 2)}%')
+        for gran in granularities:
+            my_bar.progress(current_len, text=f'{each}: {gran} // {round(current_len * 100, 2)}%')
+            slashed_candles = get_candles(each, gran=gran)
+            ts = int(len(slashed_candles) / 10)
+            w = int(ts / 2)
+            up_start_point, up_end_point = calculate_trend_line_points(slashed_candles, trend_size=ts, window=w,
+                                                                       trend='upper')
+            low_start_point, low_end_point = calculate_trend_line_points(slashed_candles, trend_size=ts, window=w,
+                                                                         trend='lower')
+            rating[gran] = get_rating(upper_trend=up_end_point[1], lower_trend=low_end_point[1],
+                                      cur_price=slashed_candles.iloc[-1]['close'])
+            gran_trendlines[gran] = {'up_start_point': up_start_point, 'up_end_point': up_end_point,
+                                     'low_start_point': low_start_point, 'low_end_point': low_end_point}
+        list_of_all.append({'rating': rating, 'ticker': each})
+        placeholder.empty()
+        with placeholder.container():
+            sorted_list = sorted(list_of_all, key=lambda x: (x['rating']['1H'], x['rating']['15m'], x['rating']['1D']))
+            for ticker in [ticker['ticker'] for ticker in sorted_list]:
+                st.markdown(get_link(ticker))
+    my_bar.empty()
+
+
 def main():
     params = st.query_params.to_dict()  # LINK PARAMS
     ticker = (params['chart'].upper() + " | ") if 'chart' in params else ""
     st.set_page_config(layout="wide", page_title=ticker + "Deal searcher | SMK", initial_sidebar_state='collapsed')
     all_tickers = get_all_tickers()
     chart = params.get('chart', st.text_input('Check a ticker', placeholder='BTCUSDT'))
-    st.title('Bitget deal searcher')
-    run = st.button('Scan the market')
+    st.title('Deal searcher (Bitget)')
+    run = st.button('Scan the indicators')
+    scan_trendlines = st.button('Scan the trendlines')
 
     if run:
         col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
@@ -200,6 +251,9 @@ def main():
         except Exception as e:
             if str(e) == "Exchange or symbol not found.":
                 st.write("The ticker wasn't found or doesn't exist.")
+
+    if scan_trendlines:
+        trendlines_rating()
 
 
 if __name__ == "__main__":
